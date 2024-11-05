@@ -1,26 +1,44 @@
 const core = require('@actions/core')
-const { wait } = require('./wait')
+const github = require('@actions/github')
 
-/**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
- */
+async function getJobStatus(token, runId, context) {
+  const octokit = github.getOctokit(token)
+  const { data: workflow } = await octokit.rest.actions.getWorkflowRun({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    run_id: runId
+  })
+  return workflow.status
+}
+
 async function run() {
   try {
-    const ms = core.getInput('milliseconds', { required: true })
+    const token = core.getInput('token')
+    const runMain = core.getInput('run_main') === 'true'
+    const runPost = core.getInput('run_post') === 'true'
+    const { context } = github
+    const runId = context.runId
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    if (runMain) {
+      core.info('Running main job step...')
+      // Simulate job running
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      core.info('Main job step completed.')
+    }
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    if (runPost) {
+      // Post-run: Get job status after the main job step
+      const postStatus = await getJobStatus(token, runId, context)
+      core.setOutput('post_status', postStatus)
+      core.info(`Job status after run: ${postStatus}`)
+    }
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    if (!runMain && !runPost) {
+      core.setFailed(
+        'No valid input specified: run_main or run_post must be true.'
+      )
+    }
   } catch (error) {
-    // Fail the workflow run if an error occurs
     core.setFailed(error.message)
   }
 }

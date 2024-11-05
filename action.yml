@@ -8,6 +8,14 @@ inputs:
     description: 'Your input description here'
     required: true
     default: '1000'
+  run_main:
+    description: 'Your input description here'
+    required: true
+    default: 'true'
+  run_post:
+    description: 'Your input description here'
+    required: true
+    default: 'true'
 
 # Define your outputs here.
 outputs:
@@ -17,3 +25,4 @@ outputs:
 runs:
   using: node20
   main: dist/index.js
+  post: dist/index.js
